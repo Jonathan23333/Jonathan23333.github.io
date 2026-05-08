@@ -3,237 +3,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 画图工具</title>
+  <title>AI 图片生成</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    body {
-      background: #f8fafc;
-      padding: 20px;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    .card {
-      background: white;
-      padding: 24px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .title {
-      text-align: center;
-      margin-bottom: 24px;
-      font-size: 22px;
-    }
-    .form-group {
-      margin-bottom: 16px;
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 600;
-      color: #333;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #94a3b8;
-      cursor: not-allowed;
-    }
-    .tips {
-      margin: 12px 0;
-      padding: 10px;
-      border-radius: 6px;
-      display: none;
-    }
-    .loading {
-      background: #e0f2fe;
-      color: #0369a1;
-    }
-    .error {
-      background: #fef2f2;
-      color: #dc2626;
-    }
-    .result {
-      margin-top: 20px;
-      display: none;
-    }
-    .result h3 {
-      margin-bottom: 12px;
-    }
-    .image-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .image-grid img {
-      width: 100%;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+    body{background:#f6f7f9;padding:30px;max-width:700px;margin:0 auto}
+    .box{background:white;padding:25px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+    h2{text-align:center;margin-bottom:20px}
+    .item{margin-bottom:16px}
+    label{display:block;margin-bottom:8px;font-weight:600}
+    input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px}
+    button{width:100%;padding:14px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold}
+    button:disabled{background:#94a3b8}
+    .msg{padding:12px;border-radius:8px;margin:10px 0;display:none}
+    .loading{background:#eff6ff;color:#1d4ed8}
+    .error{background:#fef2f2;color:#dc2626}
+    .imgs{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .imgs img{width:100%;border-radius:10px}
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="title">✨ AI 图片生成</div>
+<div class="box">
+  <h2>✨ AI 图片生成工具</h2>
 
-    <div class="form-group">
-      <label>API 密钥</label>
-      <input type="text" id="key" placeholder="输入你的密钥">
-    </div>
-
-    <div class="form-group">
-      <label>提示词</label>
-      <textarea id="prompt" placeholder="例如：一只可爱的猫咪，写实，高清，8K"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label>图片比例</label>
-      <select id="size">
-        <option value="auto">自动</option>
-        <option value="1:1">1:1</option>
-        <option value="16:9">16:9</option>
-        <option value="9:16">9:16</option>
-        <option value="4:3">4:3</option>
-        <option value="3:4">3:4</option>
-      </select>
-    </div>
-
-    <button id="generateBtn">生成图片</button>
-
-    <div class="tips loading" id="loading">正在生成中，请稍候...</div>
-    <div class="tips error" id="error"></div>
-
-    <div class="result" id="result">
-      <h3>生成结果</h3>
-      <div class="image-grid" id="imageGrid"></div>
-    </div>
+  <div class="item">
+    <label>API 密钥</label>
+    <input id="key" placeholder="输入你的密钥">
   </div>
 
-  <script>
-    const API_GENERATE = "https://api.wuyinkeji.com/api/async/image_gpt";
-    const API_QUERY = "https://api.wuyinkeji.com/api/async/image_query";
+  <div class="item">
+    <label>提示词</label>
+    <textarea id="prompt" placeholder="例如：可爱的小猫，写实风格，8K高清"></textarea>
+  </div>
 
-    const btn = document.getElementById("generateBtn");
-    const keyInput = document.getElementById("key");
-    const promptInput = document.getElementById("prompt");
-    const sizeSelect = document.getElementById("size");
-    const loading = document.getElementById("loading");
-    const error = document.getElementById("error");
-    const result = document.getElementById("result");
-    const imageGrid = document.getElementById("imageGrid");
+  <div class="item">
+    <label>比例</label>
+    <select id="size">
+      <option value="auto">自动</option>
+      <option value="1:1">1:1</option>
+      <option value="16:9">16:9</option>
+      <option value="9:16">9:16</option>
+    </select>
+  </div>
 
-    btn.addEventListener("click", async () => {
-      const key = keyInput.value.trim();
-      const prompt = promptInput.value.trim();
-      const size = sizeSelect.value;
+  <button id="go">生成图片</button>
 
-      if (!key) { showError("请输入API密钥"); return; }
-      if (!prompt) { showError("请输入提示词"); return; }
+  <div class="msg loading" id="loading">生成中，请稍候...</div>
+  <div class="msg error" id="err"></div>
+  <div class="imgs" id="imgs"></div>
+</div>
 
-      setLoading(true);
-      hideError();
-      hideResult();
+<script>
+const API = "https://api.wuyinkeji.com/api/async/image_gpt";
+const QUERY = "https://api.wuyinkeji.com/api/async/image_query";
 
-      try {
-        // 1. 提交生成任务
-        let taskRes = await fetch(API_GENERATE, {
-          method: "POST",
-          headers: {
-            "Authorization": key,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ prompt, size })
-        });
+const $ = id => document.getElementById(id);
+const key = $("key");
+const prompt = $("prompt");
+const size = $("size");
+const go = $("go");
+const loading = $("loading");
+const err = $("err");
+const imgs = $("imgs");
 
-        let taskData = await taskRes.json();
-        if (taskData.code !== 200 || !taskData.data?.id) {
-          throw new Error(taskData.msg || "提交失败");
-        }
+go.onclick = async () => {
+  if (!key.value || !prompt.value) {
+    showErr("请填写密钥和提示词");
+    return;
+  }
 
-        const taskId = taskData.data.id;
+  setLoading(true);
+  err.style.display = "none";
+  imgs.innerHTML = "";
 
-        // 2. 轮询查询图片
-        let images = [];
-        for (let i = 0; i < 40; i++) {
-          await sleep(2000);
-          let queryRes = await fetch(API_QUERY, {
-            method: "POST",
-            headers: {
-              "Authorization": key,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ id: taskId })
-          });
-          let queryData = await queryRes.json();
-          if (queryData.data?.images?.length) {
-            images = queryData.data.images;
-            break;
-          }
-        }
-
-        if (!images.length) throw new Error("生成超时，请重试");
-
-        // 3. 显示图片
-        showImages(images);
-
-      } catch (e) {
-        showError(e.message);
-      } finally {
-        setLoading(false);
-      }
+  try {
+    // 提交任务
+    let task = await noCorsPost(API, key.value, {
+      prompt: prompt.value,
+      size: size.value
     });
 
-    function setLoading(show) {
-      loading.style.display = show ? "block" : "none";
-      btn.disabled = show;
+    if (task.code !== 200 || !task.data?.id) {
+      throw new Error(task.msg || "提交失败");
     }
 
-    function showError(msg) {
-      error.textContent = msg;
-      error.style.display = "block";
+    const taskId = task.data.id;
+
+    // 轮询查图
+    let imgList = [];
+    for (let i = 0; i < 40; i++) {
+      await sleep(2000);
+      let res = await noCorsPost(QUERY, key.value, { id: taskId });
+      if (res.data?.images) {
+        imgList = res.data.images;
+        break;
+      }
     }
 
-    function hideError() {
-      error.style.display = "none";
-    }
+    if (!imgList.length) throw new Error("生成超时");
 
-    function hideResult() {
-      result.style.display = "none";
-      imageGrid.innerHTML = "";
-    }
+    imgList.forEach(url => {
+      let img = document.createElement("img");
+      img.src = url;
+      imgs.appendChild(img);
+    });
 
-    function showImages(urls) {
-      urls.forEach(url => {
-        let img = document.createElement("img");
-        img.src = url;
-        imageGrid.appendChild(img);
-      });
-      result.style.display = "block";
-    }
+  } catch (e) {
+    showErr(e.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    function sleep(ms) {
-      return new Promise(r => setTimeout(r, ms));
-    }
-  </script>
+// 核心：绕过跨域
+async function noCorsPost(url, auth, data) {
+  try {
+    let res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, {
+      method: "POST",
+      headers: {
+        "Authorization": auth,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    let json = await res.json();
+    return JSON.parse(json.contents);
+  } catch (e) {
+    throw new Error("网络/跨域错误");
+  }
+}
+
+function setLoading(show) {
+  loading.style.display = show ? "block" : "none";
+  go.disabled = show;
+}
+
+function showErr(text) {
+  err.textContent = text;
+  err.style.display = "block";
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+</script>
 </body>
 </html>
