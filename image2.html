@@ -1,162 +1,169 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GPT-Image-2 生图工具</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
-    body{background:#f6f7f9;padding:20px}
-    .box{background:white;padding:24px;border-radius:16px;max-width:600px;margin:0 auto;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
-    h2{text-align:center;margin-bottom:20px}
-    .item{margin-bottom:16px}
-    label{display:block;margin-bottom:6px;font-weight:600}
-    input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px}
-    button{width:100%;padding:14px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold}
-    button:disabled{background:#94a3b8}
-    .msg{padding:12px;border-radius:8px;margin:10px 0;display:none}
-    .loading{background:#eff6ff;color:#1d4ed8}
-    .error{background:#fef2f2;color:#dc2626}
-    .imgs{margin-top:20px;display:grid;grid-template-columns:1fr;gap:12px}
-    .imgs img{width:100%;border-radius:10px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 生图工具</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
+        body{background:#f5f7fa;padding:30px;max-width:600px;margin:0 auto}
+        .card{background:#fff;padding:25px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+        .title{text-align:center;margin-bottom:20px;font-size:22px}
+        .form-group{margin-bottom:16px}
+        label{display:block;margin-bottom:8px;font-weight:600}
+        input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:15px}
+        button{width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer}
+        button:disabled{background:#94a3b8}
+        .tips{padding:12px;border-radius:8px;margin:10px 0;display:none}
+        .loading{background:#eff6ff;color:#1d4ed8}
+        .error{background:#fef2f2;color:#dc2626}
+        .result{margin-top:20px}
+        .result h3{margin-bottom:12px}
+        .image-grid{display:grid;grid-template-columns:1fr;gap:12px}
+        .image-grid img{width:100%;border-radius:12px}
+    </style>
 </head>
 <body>
-<div class="box">
-  <h2>✨ GPT-Image-2 生图工具（速创API）</h2>
+    <div class="card">
+        <div class="title">✨ AI 图片生成</div>
 
-  <div class="item">
-    <label>API Key（sk-xxx）</label>
-    <input id="apiKey" placeholder="输入你的 sk-...">
-  </div>
+        <div class="form-group">
+            <label>API 密钥</label>
+            <input id="api_key" placeholder="输入你的密钥">
+        </div>
 
-  <div class="item">
-    <label>提示词</label>
-    <textarea id="prompt" rows="4" placeholder="例如：一只可爱的布偶猫，穿着宇航服，漂浮在绚烂的银河中，照片级真实感，4K高清细节"></textarea>
-  </div>
+        <div class="form-group">
+            <label>提示词</label>
+            <textarea id="prompt" rows="4" placeholder="例如：一只可爱的布偶猫，8K高清，写实"></textarea>
+        </div>
 
-  <div class="item">
-    <label>尺寸</label>
-    <select id="size">
-      <option value="auto">auto（默认）</option>
-      <option value="1:1">1:1</option>
-      <option value="3:2">3:2</option>
-      <option value="16:9">16:9</option>
-      <option value="9:16">9:16</option>
-    </select>
-  </div>
+        <div class="form-group">
+            <label>图片比例</label>
+            <select id="size">
+                <option value="auto">自动</option>
+                <option value="1:1">1:1</option>
+                <option value="16:9">16:9</option>
+                <option value="9:16">9:16</option>
+                <option value="3:2">3:2</option>
+            </select>
+        </div>
 
-  <button id="submitBtn">提交生图任务</button>
+        <button id="generateBtn">开始生成图片</button>
 
-  <div class="msg loading" id="loading">任务提交成功，等待生成结果...</div>
-  <div class="msg error" id="err"></div>
-  <div class="imgs" id="imgs"></div>
-</div>
+        <div class="tips loading" id="loading">生成中，请稍候...</div>
+        <div class="tips error" id="error"></div>
 
-<script>
-// -------- 配置 --------
-const BASE_URL = "https://api.wuyinkeji.com/api/async";
-// 跨域代理（GitHub Pages 专用）
-const PROXY = "https://api.allorigins.win/raw?url=";
+        <div class="result" id="result" style="display:none">
+            <h3>生成成功 ✅</h3>
+            <div class="image-grid" id="imageContainer"></div>
+        </div>
+    </div>
 
-// -------- DOM --------
-const $ = id => document.getElementById(id);
-const apiKeyEl = $("apiKey");
-const promptEl = $("prompt");
-const sizeEl = $("size");
-const submitBtn = $("submitBtn");
-const loadingEl = $("loading");
-const errEl = $("err");
-const imgsEl = $("imgs");
+    <script>
+        // 接口地址（和你Python完全一样）
+        const API_GENERATE = "https://api.wuyinkeji.com/api/async/image_gpt";
+        const API_QUERY = "https://api.wuyinkeji.com/api/async/detail";
 
-// -------- 主流程 --------
-submitBtn.onclick = async () => {
-  const apiKey = apiKeyEl.value.trim();
-  const prompt = promptEl.value.trim();
-  const size = sizeEl.value;
+        // DOM
+        const $ = id => document.getElementById(id);
+        const keyInput = $("api_key");
+        const promptInput = $("prompt");
+        const sizeInput = $("size");
+        const generateBtn = $("generateBtn");
+        const loading = $("loading");
+        const error = $("error");
+        const result = $("result");
+        const imageContainer = $("imageContainer");
 
-  if (!apiKey || !prompt) {
-    showErr("请填写 API Key 和提示词");
-    return;
-  }
+        // 点击生成
+        generateBtn.onclick = async () => {
+            const key = keyInput.value.trim();
+            const prompt = promptInput.value.trim();
+            const size = sizeInput.value;
 
-  setLoading(true);
-  errEl.style.display = "none";
-  imgsEl.innerHTML = "";
+            if (!key || !prompt) {
+                showError("请填写密钥和提示词");
+                return;
+            }
 
-  try {
-    // 1. 提交生图任务（同官方 /image_gpt）
-    const taskId = await submitTask(apiKey, prompt, size);
-    if (!taskId) throw new Error("获取任务ID失败");
-    console.log("任务ID：", taskId);
+            // 状态重置
+            setLoading(true);
+            error.style.display = "none";
+            result.style.display = "none";
+            imageContainer.innerHTML = "";
 
-    // 2. 轮询查询结果（同官方 /detail）
-    let result = null;
-    for (let i = 0; i < 30; i++) { // 最多等待60秒
-      await sleep(2000);
-      const res = await getResult(apiKey, taskId);
-      if (res?.images?.length) {
-        result = res;
-        break;
-      }
-    }
+            try {
+                // 1. 提交任务（和Python一样）
+                const taskId = await submitTask(key, prompt, size);
+                if (!taskId) throw new Error("提交失败，请检查密钥");
 
-    if (!result) throw new Error("生成超时或失败");
+                // 2. 轮询查询（和Python一样）
+                const imageUrls = await waitForResult(key, taskId);
+                if (!imageUrls) throw new Error("生成超时或失败");
 
-    // 3. 展示图片
-    result.images.forEach(url => {
-      const img = document.createElement("img");
-      img.src = url;
-      imgsEl.appendChild(img);
-    });
+                // 3. 显示图片
+                showImages(imageUrls);
 
-  } catch (e) {
-    showErr(e.message || "未知错误");
-  } finally {
-    setLoading(false);
-  }
-};
+            } catch (e) {
+                showError(e.message);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-// -------- 接口封装（代理跨域） --------
-// 提交任务：POST /api/async/image_gpt
-async function submitTask(key, prompt, size) {
-  const url = `${PROXY}${encodeURIComponent(`${BASE_URL}/image_gpt`)}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Authorization": key,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ prompt, size })
-  });
-  const json = await res.json();
-  if (json.code !== 200) throw new Error(json.msg || "提交失败");
-  return json.data?.id;
-}
+        // 提交任务（POST）
+        async function submitTask(key, prompt, size) {
+            const res = await fetch(API_GENERATE, {
+                method: "POST",
+                headers: {
+                    "Authorization": key,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ prompt, size })
+            });
+            const data = await res.json();
+            console.log("提交返回:", data);
+            return data.code === 200 ? data.data.id : null;
+        }
 
-// 查询结果：GET /api/async/detail?key=xxx&id=xxx
-async function getResult(key, taskId) {
-  const target = `${BASE_URL}/detail?key=${encodeURIComponent(key)}&id=${encodeURIComponent(taskId)}`;
-  const url = `${PROXY}${encodeURIComponent(target)}`;
-  const res = await fetch(url);
-  const json = await res.json();
-  if (json.code === 1) return json.data; // 成功
-  if (json.code === 2) throw new Error(json.msg || "任务失败");
-  return null; // 处理中
-}
+        // 查询结果（GET）
+        async function waitForResult(key, taskId) {
+            for (let i = 0; i < 60; i++) {
+                await sleep(2000);
+                const url = `${API_QUERY}?key=${key}&id=${taskId}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                console.log(`第${i+1}次查询:`, data);
 
-// -------- 工具函数 --------
-function setLoading(show) {
-  loadingEl.style.display = show ? "block" : "none";
-  submitBtn.disabled = show;
-}
-function showErr(text) {
-  errEl.textContent = text;
-  errEl.style.display = "block";
-}
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
-</script>
+                if (data.code === 1) return data.data.images;
+                if (data.code === 2) throw new Error(data.msg || "生成失败");
+            }
+            return null;
+        }
+
+        // 工具函数
+        function showImages(urls) {
+            urls.forEach(url => {
+                const img = document.createElement("img");
+                img.src = url;
+                imageContainer.appendChild(img);
+            });
+            result.style.display = "block";
+        }
+
+        function setLoading(show) {
+            loading.style.display = show ? "block" : "none";
+            generateBtn.disabled = show;
+        }
+
+        function showError(msg) {
+            error.innerText = msg;
+            error.style.display = "block";
+        }
+
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+    </script>
 </body>
 </html>
