@@ -3,146 +3,157 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 图片生成</title>
+  <title>GPT-Image-2 生图工具</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
-    body{background:#f6f7f9;padding:30px;max-width:700px;margin:0 auto}
-    .box{background:white;padding:25px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+    body{background:#f6f7f9;padding:20px}
+    .box{background:white;padding:24px;border-radius:16px;max-width:600px;margin:0 auto;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
     h2{text-align:center;margin-bottom:20px}
     .item{margin-bottom:16px}
-    label{display:block;margin-bottom:8px;font-weight:600}
-    input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px}
+    label{display:block;margin-bottom:6px;font-weight:600}
+    input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px}
     button{width:100%;padding:14px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold}
     button:disabled{background:#94a3b8}
     .msg{padding:12px;border-radius:8px;margin:10px 0;display:none}
     .loading{background:#eff6ff;color:#1d4ed8}
     .error{background:#fef2f2;color:#dc2626}
-    .imgs{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .imgs{margin-top:20px;display:grid;grid-template-columns:1fr;gap:12px}
     .imgs img{width:100%;border-radius:10px}
   </style>
 </head>
 <body>
 <div class="box">
-  <h2>✨ AI 图片生成工具</h2>
+  <h2>✨ GPT-Image-2 生图工具（速创API）</h2>
 
   <div class="item">
-    <label>API 密钥</label>
-    <input id="key" placeholder="输入你的密钥">
+    <label>API Key（sk-xxx）</label>
+    <input id="apiKey" placeholder="输入你的 sk-...">
   </div>
 
   <div class="item">
     <label>提示词</label>
-    <textarea id="prompt" placeholder="例如：可爱的小猫，写实风格，8K高清"></textarea>
+    <textarea id="prompt" rows="4" placeholder="例如：一只可爱的布偶猫，穿着宇航服，漂浮在绚烂的银河中，照片级真实感，4K高清细节"></textarea>
   </div>
 
   <div class="item">
-    <label>比例</label>
+    <label>尺寸</label>
     <select id="size">
-      <option value="auto">自动</option>
+      <option value="auto">auto（默认）</option>
       <option value="1:1">1:1</option>
+      <option value="3:2">3:2</option>
       <option value="16:9">16:9</option>
       <option value="9:16">9:16</option>
     </select>
   </div>
 
-  <button id="go">生成图片</button>
+  <button id="submitBtn">提交生图任务</button>
 
-  <div class="msg loading" id="loading">生成中，请稍候...</div>
+  <div class="msg loading" id="loading">任务提交成功，等待生成结果...</div>
   <div class="msg error" id="err"></div>
   <div class="imgs" id="imgs"></div>
 </div>
 
 <script>
-const API = "https://api.wuyinkeji.com/api/async/image_gpt";
-const QUERY = "https://api.wuyinkeji.com/api/async/image_query";
+// -------- 配置 --------
+const BASE_URL = "https://api.wuyinkeji.com/api/async";
+// 跨域代理（GitHub Pages 专用）
+const PROXY = "https://api.allorigins.win/raw?url=";
 
+// -------- DOM --------
 const $ = id => document.getElementById(id);
-const key = $("key");
-const prompt = $("prompt");
-const size = $("size");
-const go = $("go");
-const loading = $("loading");
-const err = $("err");
-const imgs = $("imgs");
+const apiKeyEl = $("apiKey");
+const promptEl = $("prompt");
+const sizeEl = $("size");
+const submitBtn = $("submitBtn");
+const loadingEl = $("loading");
+const errEl = $("err");
+const imgsEl = $("imgs");
 
-go.onclick = async () => {
-  if (!key.value || !prompt.value) {
-    showErr("请填写密钥和提示词");
+// -------- 主流程 --------
+submitBtn.onclick = async () => {
+  const apiKey = apiKeyEl.value.trim();
+  const prompt = promptEl.value.trim();
+  const size = sizeEl.value;
+
+  if (!apiKey || !prompt) {
+    showErr("请填写 API Key 和提示词");
     return;
   }
 
   setLoading(true);
-  err.style.display = "none";
-  imgs.innerHTML = "";
+  errEl.style.display = "none";
+  imgsEl.innerHTML = "";
 
   try {
-    // 提交任务
-    let task = await noCorsPost(API, key.value, {
-      prompt: prompt.value,
-      size: size.value
-    });
+    // 1. 提交生图任务（同官方 /image_gpt）
+    const taskId = await submitTask(apiKey, prompt, size);
+    if (!taskId) throw new Error("获取任务ID失败");
+    console.log("任务ID：", taskId);
 
-    if (task.code !== 200 || !task.data?.id) {
-      throw new Error(task.msg || "提交失败");
-    }
-
-    const taskId = task.data.id;
-
-    // 轮询查图
-    let imgList = [];
-    for (let i = 0; i < 40; i++) {
+    // 2. 轮询查询结果（同官方 /detail）
+    let result = null;
+    for (let i = 0; i < 30; i++) { // 最多等待60秒
       await sleep(2000);
-      let res = await noCorsPost(QUERY, key.value, { id: taskId });
-      if (res.data?.images) {
-        imgList = res.data.images;
+      const res = await getResult(apiKey, taskId);
+      if (res?.images?.length) {
+        result = res;
         break;
       }
     }
 
-    if (!imgList.length) throw new Error("生成超时");
+    if (!result) throw new Error("生成超时或失败");
 
-    imgList.forEach(url => {
-      let img = document.createElement("img");
+    // 3. 展示图片
+    result.images.forEach(url => {
+      const img = document.createElement("img");
       img.src = url;
-      imgs.appendChild(img);
+      imgsEl.appendChild(img);
     });
 
   } catch (e) {
-    showErr(e.message);
+    showErr(e.message || "未知错误");
   } finally {
     setLoading(false);
   }
 };
 
-// 核心：绕过跨域
-async function noCorsPost(url, auth, data) {
-  try {
-    let res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, {
-      method: "POST",
-      headers: {
-        "Authorization": auth,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
-    });
-
-    let json = await res.json();
-    return JSON.parse(json.contents);
-  } catch (e) {
-    throw new Error("网络/跨域错误");
-  }
+// -------- 接口封装（代理跨域） --------
+// 提交任务：POST /api/async/image_gpt
+async function submitTask(key, prompt, size) {
+  const url = `${PROXY}${encodeURIComponent(`${BASE_URL}/image_gpt`)}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": key,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ prompt, size })
+  });
+  const json = await res.json();
+  if (json.code !== 200) throw new Error(json.msg || "提交失败");
+  return json.data?.id;
 }
 
+// 查询结果：GET /api/async/detail?key=xxx&id=xxx
+async function getResult(key, taskId) {
+  const target = `${BASE_URL}/detail?key=${encodeURIComponent(key)}&id=${encodeURIComponent(taskId)}`;
+  const url = `${PROXY}${encodeURIComponent(target)}`;
+  const res = await fetch(url);
+  const json = await res.json();
+  if (json.code === 1) return json.data; // 成功
+  if (json.code === 2) throw new Error(json.msg || "任务失败");
+  return null; // 处理中
+}
+
+// -------- 工具函数 --------
 function setLoading(show) {
-  loading.style.display = show ? "block" : "none";
-  go.disabled = show;
+  loadingEl.style.display = show ? "block" : "none";
+  submitBtn.disabled = show;
 }
-
 function showErr(text) {
-  err.textContent = text;
-  err.style.display = "block";
+  errEl.textContent = text;
+  errEl.style.display = "block";
 }
-
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
